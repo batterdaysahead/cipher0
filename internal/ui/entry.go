@@ -9,9 +9,9 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 
-	"github.com/2die4cheesecake/cipher0/internal/totp"
-	"github.com/2die4cheesecake/cipher0/internal/utils"
-	"github.com/2die4cheesecake/cipher0/internal/vault"
+	"github.com/batterdaysahead/cipher0/internal/totp"
+	"github.com/batterdaysahead/cipher0/internal/utils"
+	"github.com/batterdaysahead/cipher0/internal/vault"
 )
 
 type EntryField int

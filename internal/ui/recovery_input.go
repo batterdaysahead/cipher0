@@ -9,8 +9,8 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 
-	"github.com/2die4cheesecake/cipher0/internal/crypto"
-	"github.com/2die4cheesecake/cipher0/internal/vault"
+	"github.com/batterdaysahead/cipher0/internal/crypto"
+	"github.com/batterdaysahead/cipher0/internal/vault"
 )
 
 type RecoveryInputModel struct {

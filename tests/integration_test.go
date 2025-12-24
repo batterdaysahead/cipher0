@@ -8,10 +8,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/2die4cheesecake/cipher0/internal/crypto"
-	"github.com/2die4cheesecake/cipher0/internal/totp"
-	"github.com/2die4cheesecake/cipher0/internal/utils"
-	"github.com/2die4cheesecake/cipher0/internal/vault"
+	"github.com/batterdaysahead/cipher0/internal/crypto"
+	"github.com/batterdaysahead/cipher0/internal/totp"
+	"github.com/batterdaysahead/cipher0/internal/utils"
+	"github.com/batterdaysahead/cipher0/internal/vault"
 )
 
 // mockKeyring holds the mock keyring instance for tests.

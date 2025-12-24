@@ -1,4 +1,4 @@
-module github.com/2die4cheesecake/cipher0
+module github.com/batterdaysahead/cipher0
 
 go 1.25
 

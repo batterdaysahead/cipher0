@@ -9,8 +9,8 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
-	"github.com/2die4cheesecake/cipher0/internal/config"
-	"github.com/2die4cheesecake/cipher0/internal/vault"
+	"github.com/batterdaysahead/cipher0/internal/config"
+	"github.com/batterdaysahead/cipher0/internal/vault"
 )
 
 type BackupModel struct {

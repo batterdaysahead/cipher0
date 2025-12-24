@@ -13,9 +13,9 @@ import (
 	"github.com/spf13/cobra"
 	"golang.org/x/term"
 
-	"github.com/2die4cheesecake/cipher0/internal/config"
-	"github.com/2die4cheesecake/cipher0/internal/ui"
-	"github.com/2die4cheesecake/cipher0/internal/vault"
+	"github.com/batterdaysahead/cipher0/internal/config"
+	"github.com/batterdaysahead/cipher0/internal/ui"
+	"github.com/batterdaysahead/cipher0/internal/vault"
 )
 
 // vaultPath is the session-only vault path override from --vault flag.

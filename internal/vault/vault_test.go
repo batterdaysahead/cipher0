@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/2die4cheesecake/cipher0/internal/crypto"
+	"github.com/batterdaysahead/cipher0/internal/crypto"
 )
 
 // mockKeyring holds the mock keyring instance for tests.

@@ -11,7 +11,7 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/2die4cheesecake/cipher0/internal/crypto"
+	"github.com/batterdaysahead/cipher0/internal/crypto"
 )
 
 var (
