@@ -67,7 +67,3 @@ Backup files have password fields cleared—they only work with the recovery phr
 
 - Vault: 0600 (owner read/write only)
 - Config: 0644
-
-## Issues
-
-Report security issues privately to the maintainer.
