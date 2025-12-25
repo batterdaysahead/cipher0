@@ -63,7 +63,6 @@ See [SECURITY.md](SECURITY.md) for details.
 ## Config
 
 - macOS/Linux: `~/.config/cipher0/config.json`
-- Windows: `%APPDATA%\cipher0\config.json`
 
 ## Dev
 
