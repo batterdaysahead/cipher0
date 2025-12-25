@@ -11,12 +11,21 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/spf13/cobra"
+	"golang.org/x/sys/unix"
 	"golang.org/x/term"
 
 	"github.com/batterdaysahead/cipher0/internal/config"
 	"github.com/batterdaysahead/cipher0/internal/ui"
 	"github.com/batterdaysahead/cipher0/internal/vault"
 )
+
+// init disables core dumps to prevent sensitive data from being written to disk.
+func init() {
+	var rlim unix.Rlimit
+	rlim.Cur = 0
+	rlim.Max = 0
+	_ = unix.Setrlimit(unix.RLIMIT_CORE, &rlim)
+}
 
 // vaultPath is the session-only vault path override from --vault flag.
 var vaultPath string
@@ -68,7 +77,7 @@ func runTUI(cmd *cobra.Command, args []string) {
 	p := tea.NewProgram(app, tea.WithAltScreen())
 
 	sigChan := make(chan os.Signal, 1)
-	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM, syscall.SIGHUP)
+	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM, syscall.SIGHUP, syscall.SIGQUIT)
 	go func() {
 		<-sigChan
 		if v := app.GetVault(); v != nil {
