@@ -60,10 +60,16 @@ Backup files have password fields cleared—they only work with the recovery phr
 
 ## Memory
 
-- Sensitive data zeroed via `ZeroMemory()` after use
-- MEK cleared on vault lock
-- Signal handlers clean up on SIGINT/SIGTERM/SIGHUP
-- Clipboard cleared after timeout
+MEK protected via [memguard](https://github.com/awnumar/memguard) Enclave:
+- **Encrypted at rest**: MEK stored encrypted, decrypted only during crypto ops
+- **mlock**: Decrypted key won't swap to disk
+- **Auto-wipe**: LockedBuffer destroyed immediately after use
+- **Core dumps disabled**: `RLIMIT_CORE` = 0
+
+Other protections:
+- Derived keys wiped via `ZeroMemory()`
+- Clipboard auto-clears
+- Signal handlers ensure cleanup
 
 ## Files
 
