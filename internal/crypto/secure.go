@@ -2,8 +2,13 @@
 package crypto
 
 import (
+	"errors"
+
 	"github.com/awnumar/memguard"
 )
+
+// ErrMEKUnavailable is returned when the MEK cannot be decrypted from the Enclave.
+var ErrMEKUnavailable = errors.New("MEK unavailable: enclave may be corrupted")
 
 // SecureMEK stores the MEK in an encrypted Enclave.
 // Only decrypted briefly when needed for crypto ops.
@@ -23,21 +28,24 @@ func NewSecureMEK(key []byte) *SecureMEK {
 	return &SecureMEK{enclave: enclave}
 }
 
-// Bytes opens the Enclave and returns the key. Caller must call cleanup().
+// Bytes opens the Enclave and returns the key.
+// Returns ErrMEKUnavailable if the enclave cannot be opened.
+// Caller must call cleanup() when done.
 //
-//	key, cleanup := mek.Bytes()
+//	key, cleanup, err := mek.Bytes()
+//	if err != nil { return err }
 //	defer cleanup()
-func (s *SecureMEK) Bytes() ([]byte, func()) {
+func (s *SecureMEK) Bytes() ([]byte, func(), error) {
 	if s == nil || s.enclave == nil {
-		return nil, func() {}
+		return nil, func() {}, ErrMEKUnavailable
 	}
 
 	buf, err := s.enclave.Open()
 	if err != nil {
-		return nil, func() {}
+		return nil, func() {}, ErrMEKUnavailable
 	}
 
-	return buf.Bytes(), func() { buf.Destroy() }
+	return buf.Bytes(), func() { buf.Destroy() }, nil
 }
 
 // Destroy releases the Enclave.

@@ -262,7 +262,10 @@ func (v *Vault) saveLocked() error {
 
 	// Encrypt with AAD to bind data to header metadata
 	aad := v.db.BuildAAD()
-	mekBytes, mekCleanup := v.mek.Bytes()
+	mekBytes, mekCleanup, err := v.mek.Bytes()
+	if err != nil {
+		return err
+	}
 	defer mekCleanup()
 	encData, err := crypto.EncryptWithAAD(dataJSON, mekBytes, aad)
 	if err != nil {
@@ -476,7 +479,10 @@ func (v *Vault) ChangePassword(oldPassword, newPassword string) error {
 	}
 	defer crypto.ZeroMemory(newKey)
 
-	mekBytes, mekCleanup := v.mek.Bytes()
+	mekBytes, mekCleanup, err := v.mek.Bytes()
+	if err != nil {
+		return err
+	}
 	defer mekCleanup()
 	newEncMEK, err := crypto.EncryptMEK(mekBytes, newKey)
 	if err != nil {
@@ -517,7 +523,10 @@ func (v *Vault) SetNewPassword(newPassword string) error {
 	}
 	defer crypto.ZeroMemory(newKey)
 
-	mekBytes, mekCleanup := v.mek.Bytes()
+	mekBytes, mekCleanup, err := v.mek.Bytes()
+	if err != nil {
+		return err
+	}
 	defer mekCleanup()
 	newEncMEK, err := crypto.EncryptMEK(mekBytes, newKey)
 	if err != nil {

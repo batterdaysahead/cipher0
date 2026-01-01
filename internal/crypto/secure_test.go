@@ -17,7 +17,10 @@ func TestNewSecureMEK(t *testing.T) {
 	}
 	defer mek.Destroy()
 
-	retrieved, cleanup := mek.Bytes()
+	retrieved, cleanup, err := mek.Bytes()
+	if err != nil {
+		t.Fatalf("Bytes() error: %v", err)
+	}
 	defer cleanup()
 
 	if len(retrieved) != 32 {
@@ -50,10 +53,9 @@ func TestSecureMEKDestroy(t *testing.T) {
 		t.Error("should be destroyed")
 	}
 
-	retrieved, cleanup := mek.Bytes()
-	defer cleanup()
-	if retrieved != nil {
-		t.Error("Bytes() should return nil after Destroy()")
+	_, _, err := mek.Bytes()
+	if err != ErrMEKUnavailable {
+		t.Errorf("got %v, want ErrMEKUnavailable", err)
 	}
 }
 
@@ -76,11 +78,9 @@ func TestSecureMEKIsDestroyed(t *testing.T) {
 
 func TestSecureMEKBytesNil(t *testing.T) {
 	var nilMEK *SecureMEK
-	retrieved, cleanup := nilMEK.Bytes()
-	defer cleanup()
-
-	if retrieved != nil {
-		t.Error("nil MEK should return nil bytes")
+	_, _, err := nilMEK.Bytes()
+	if err != ErrMEKUnavailable {
+		t.Errorf("got %v, want ErrMEKUnavailable", err)
 	}
 }
 
@@ -94,7 +94,10 @@ func TestSecureMEKMultipleAccess(t *testing.T) {
 	defer mek.Destroy()
 
 	for i := 0; i < 3; i++ {
-		retrieved, cleanup := mek.Bytes()
+		retrieved, cleanup, err := mek.Bytes()
+		if err != nil {
+			t.Fatalf("access %d: %v", i, err)
+		}
 		if len(retrieved) != 32 {
 			t.Errorf("access %d: got %d bytes", i, len(retrieved))
 		}
@@ -106,7 +109,10 @@ func TestSecureMEKCleanupIdempotent(t *testing.T) {
 	mek := NewSecureMEK(make([]byte, 32))
 	defer mek.Destroy()
 
-	_, cleanup := mek.Bytes()
+	_, cleanup, err := mek.Bytes()
+	if err != nil {
+		t.Fatalf("Bytes() error: %v", err)
+	}
 	cleanup()
 	cleanup() // should not panic
 }
