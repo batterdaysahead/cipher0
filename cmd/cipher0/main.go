@@ -32,7 +32,12 @@ func init() {
 var vaultPath string
 
 func main() {
-	// Ensure memguard cleans up all sensitive memory on exit
+	// Catch panics and ensure memguard cleanup
+	defer func() {
+		if r := recover(); r != nil {
+			crypto.SafeExit()
+		}
+	}()
 	defer crypto.SafeExit()
 
 	if err := rootCmd.Execute(); err != nil {
