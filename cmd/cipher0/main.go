@@ -15,6 +15,7 @@ import (
 	"golang.org/x/term"
 
 	"github.com/batterdaysahead/cipher0/internal/config"
+	"github.com/batterdaysahead/cipher0/internal/crypto"
 	"github.com/batterdaysahead/cipher0/internal/ui"
 	"github.com/batterdaysahead/cipher0/internal/vault"
 )
@@ -31,6 +32,14 @@ func init() {
 var vaultPath string
 
 func main() {
+	// Catch panics and ensure memguard cleanup
+	defer func() {
+		if r := recover(); r != nil {
+			crypto.SafeExit()
+		}
+	}()
+	defer crypto.SafeExit()
+
 	if err := rootCmd.Execute(); err != nil {
 		os.Exit(1)
 	}
@@ -83,7 +92,7 @@ func runTUI(cmd *cobra.Command, args []string) {
 		if v := app.GetVault(); v != nil {
 			v.Lock()
 		}
-		os.Exit(0)
+		crypto.SafeExit()
 	}()
 
 	defer func() {

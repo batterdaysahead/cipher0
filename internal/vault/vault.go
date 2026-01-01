@@ -34,7 +34,7 @@ type VaultData struct {
 type Vault struct {
 	mu       sync.RWMutex
 	path     string
-	mek      []byte
+	mek      *crypto.SecureMEK
 	db       *Database
 	data     *VaultData
 	modified bool
@@ -53,7 +53,7 @@ func Create(path, password string) (*Vault, string, error) {
 		Entries: make(EntryList, 0),
 	}
 
-	mek, err := bundle.DecryptMEKWithPassword(password)
+	mekBytes, err := bundle.DecryptMEKWithPassword(password)
 	if err != nil {
 		return nil, "", err
 	}
@@ -72,24 +72,27 @@ func Create(path, password string) (*Vault, string, error) {
 
 	dataJSON, err := json.Marshal(data)
 	if err != nil {
-		crypto.ZeroMemory(mek)
+		crypto.ZeroMemory(mekBytes)
 		return nil, "", err
 	}
 
 	// Encrypt with AAD
 	aad := db.BuildAAD()
-	encryptedData, err := crypto.EncryptWithAAD(dataJSON, mek, aad)
+	encryptedData, err := crypto.EncryptWithAAD(dataJSON, mekBytes, aad)
 	if err != nil {
-		crypto.ZeroMemory(mek)
+		crypto.ZeroMemory(mekBytes)
 		return nil, "", err
 	}
 
 	db.SetEncryptedData(encryptedData)
 
 	if err := SaveDatabase(db, path); err != nil {
-		crypto.ZeroMemory(mek)
+		crypto.ZeroMemory(mekBytes)
 		return nil, "", err
 	}
+
+	// Wrap MEK in secure memory (this wipes mekBytes)
+	mek := crypto.NewSecureMEK(mekBytes)
 
 	vault := &Vault{
 		path:     path,
@@ -137,7 +140,7 @@ func UnlockWithPassword(path, password string) (*Vault, error) {
 	}
 	defer crypto.ZeroMemory(key)
 
-	mek, err := crypto.DecryptMEK(encMEK, key)
+	mekBytes, err := crypto.DecryptMEK(encMEK, key)
 	if err != nil {
 		if errors.Is(err, crypto.ErrMEKDecryptionFailed) {
 			return nil, ErrWrongPassword
@@ -145,11 +148,14 @@ func UnlockWithPassword(path, password string) (*Vault, error) {
 		return nil, err
 	}
 
-	data, err := decryptVaultData(db, mek)
+	data, err := decryptVaultData(db, mekBytes)
 	if err != nil {
-		crypto.ZeroMemory(mek)
+		crypto.ZeroMemory(mekBytes)
 		return nil, err
 	}
+
+	// Wrap MEK in secure memory (this wipes mekBytes)
+	mek := crypto.NewSecureMEK(mekBytes)
 
 	return &Vault{
 		path:     path,
@@ -181,7 +187,7 @@ func UnlockWithPhrase(path, phrase string) (*Vault, error) {
 		return nil, err
 	}
 
-	mek, err := crypto.DecryptMEK(encMEK, phraseKey)
+	mekBytes, err := crypto.DecryptMEK(encMEK, phraseKey)
 	if err != nil {
 		if errors.Is(err, crypto.ErrMEKDecryptionFailed) {
 			return nil, ErrWrongPhrase
@@ -189,11 +195,14 @@ func UnlockWithPhrase(path, phrase string) (*Vault, error) {
 		return nil, err
 	}
 
-	data, err := decryptVaultData(db, mek)
+	data, err := decryptVaultData(db, mekBytes)
 	if err != nil {
-		crypto.ZeroMemory(mek)
+		crypto.ZeroMemory(mekBytes)
 		return nil, err
 	}
+
+	// Wrap MEK in secure memory (this wipes mekBytes)
+	mek := crypto.NewSecureMEK(mekBytes)
 
 	return &Vault{
 		path:     path,
@@ -253,7 +262,12 @@ func (v *Vault) saveLocked() error {
 
 	// Encrypt with AAD to bind data to header metadata
 	aad := v.db.BuildAAD()
-	encData, err := crypto.EncryptWithAAD(dataJSON, v.mek, aad)
+	mekBytes, mekCleanup, err := v.mek.Bytes()
+	if err != nil {
+		return err
+	}
+	defer mekCleanup()
+	encData, err := crypto.EncryptWithAAD(dataJSON, mekBytes, aad)
 	if err != nil {
 		return err
 	}
@@ -268,13 +282,13 @@ func (v *Vault) saveLocked() error {
 	return nil
 }
 
-// Lock zeroes the MEK and closes the vault.
+// Lock destroys the MEK and closes the vault.
 func (v *Vault) Lock() {
 	v.mu.Lock()
 	defer v.mu.Unlock()
 
 	if v.mek != nil {
-		crypto.ZeroMemory(v.mek)
+		v.mek.Destroy()
 		v.mek = nil
 	}
 	v.data = nil
@@ -284,7 +298,7 @@ func (v *Vault) Lock() {
 func (v *Vault) IsLocked() bool {
 	v.mu.RLock()
 	defer v.mu.RUnlock()
-	return v.mek == nil
+	return v.mek == nil || v.mek.IsDestroyed()
 }
 
 // IsModified returns true if the vault has unsaved changes.
@@ -417,7 +431,7 @@ func (v *Vault) ChangePassword(oldPassword, newPassword string) error {
 	v.mu.Lock()
 	defer v.mu.Unlock()
 
-	if v.mek == nil {
+	if v.mek == nil || v.mek.IsDestroyed() {
 		return ErrVaultLocked
 	}
 
@@ -465,7 +479,12 @@ func (v *Vault) ChangePassword(oldPassword, newPassword string) error {
 	}
 	defer crypto.ZeroMemory(newKey)
 
-	newEncMEK, err := crypto.EncryptMEK(v.mek, newKey)
+	mekBytes, mekCleanup, err := v.mek.Bytes()
+	if err != nil {
+		return err
+	}
+	defer mekCleanup()
+	newEncMEK, err := crypto.EncryptMEK(mekBytes, newKey)
 	if err != nil {
 		return err
 	}
@@ -480,7 +499,7 @@ func (v *Vault) SetNewPassword(newPassword string) error {
 	v.mu.Lock()
 	defer v.mu.Unlock()
 
-	if v.mek == nil {
+	if v.mek == nil || v.mek.IsDestroyed() {
 		return ErrVaultLocked
 	}
 
@@ -504,7 +523,12 @@ func (v *Vault) SetNewPassword(newPassword string) error {
 	}
 	defer crypto.ZeroMemory(newKey)
 
-	newEncMEK, err := crypto.EncryptMEK(v.mek, newKey)
+	mekBytes, mekCleanup, err := v.mek.Bytes()
+	if err != nil {
+		return err
+	}
+	defer mekCleanup()
+	newEncMEK, err := crypto.EncryptMEK(mekBytes, newKey)
 	if err != nil {
 		return err
 	}
@@ -532,7 +556,7 @@ func (v *Vault) VerifyPassword(password string) error {
 	v.mu.RLock()
 	defer v.mu.RUnlock()
 
-	if v.mek == nil {
+	if v.mek == nil || v.mek.IsDestroyed() {
 		return ErrVaultLocked
 	}
 
@@ -575,7 +599,7 @@ func (v *Vault) VerifyPhrase(phrase string) error {
 	v.mu.RLock()
 	defer v.mu.RUnlock()
 
-	if v.mek == nil {
+	if v.mek == nil || v.mek.IsDestroyed() {
 		return ErrVaultLocked
 	}
 
